@@ -1,4 +1,0 @@
-requests
-bottle
-beaker
-healthgraph-api
