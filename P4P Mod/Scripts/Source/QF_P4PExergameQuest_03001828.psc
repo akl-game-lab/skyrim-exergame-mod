@@ -1,11 +1,25 @@
 ;BEGIN FRAGMENT CODE - Do not edit anything between this and the end comment
-;NEXT FRAGMENT INDEX 41
+;NEXT FRAGMENT INDEX 43
 Scriptname QF_P4PExergameQuest_03001828 Extends Quest Hidden
+
+;BEGIN ALIAS PROPERTY NPCQuestMaster
+;ALIAS PROPERTY TYPE ReferenceAlias
+ReferenceAlias Property Alias_NPCQuestMaster Auto
+;END ALIAS PROPERTY
 
 ;BEGIN ALIAS PROPERTY PlayerAlias
 ;ALIAS PROPERTY TYPE ReferenceAlias
 ReferenceAlias Property Alias_PlayerAlias Auto
 ;END ALIAS PROPERTY
+
+;BEGIN FRAGMENT Fragment_41
+Function Fragment_41()
+;BEGIN CODE
+SetObjectiveDisplayed(5)
+Debug.MessageBox("objective is set to 5")
+;END CODE
+EndFunction
+;END FRAGMENT
 
 ;BEGIN FRAGMENT Fragment_4
 Function Fragment_4()
@@ -33,6 +47,15 @@ SetStage(20)
 EndFunction
 ;END FRAGMENT
 
+;BEGIN FRAGMENT Fragment_0
+Function Fragment_0()
+;BEGIN CODE
+SetObjectiveDisplayed(10)
+Game.SetGameSettingFloat("fXPPerSkillRank", 0.00000)
+;END CODE
+EndFunction
+;END FRAGMENT
+
 ;BEGIN FRAGMENT Fragment_39
 Function Fragment_39()
 ;BEGIN CODE
@@ -43,15 +66,6 @@ Game.SetPlayerExperience(0)
 Game.SetGameSettingFloat("fXPPerSkillRank", 1)
 
 Debug.MessageBox("Road to fitness quest has been abandoned. Skyrim has reset to it's vanilla levelling system")
-;END CODE
-EndFunction
-;END FRAGMENT
-
-;BEGIN FRAGMENT Fragment_0
-Function Fragment_0()
-;BEGIN CODE
-SetObjectiveDisplayed(10)
-Game.SetGameSettingFloat("fXPPerSkillRank", 0.00000)
 ;END CODE
 EndFunction
 ;END FRAGMENT

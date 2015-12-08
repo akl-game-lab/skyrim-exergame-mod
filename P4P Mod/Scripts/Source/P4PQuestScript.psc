@@ -6,6 +6,7 @@ import FISSFactory
 
 MiscObject Property OrbOfExperience  Auto  
 
+{This function schedules an update in the next hour}
 Event OnInit()
 	;Use when testing as waiting an hour is too long
 	;RegisterForSingleUpdate(10)
@@ -13,8 +14,13 @@ Event OnInit()
 	RegisterForSingleUpdate(3600)
 EndEvent
 
+
 Event OnUpdate()
+
+	;testing to see the orb of exp
+	Debug.MessageBox("testing to see if this is run")
 	Actor player = Game.GetPlayer()
+	
 	int stage = GetStage()
 
 	;If the player holds atleast 1 OrbOfExperience, level up the character
@@ -116,3 +122,7 @@ Function tidyDistributionFile(string[] levelDists)
 	string end = fwrite.endSave()
 	;File looks very fucked after a tidy when opened in notepad, however it functions correctly when manipulated by Creation Kit.
 EndFunction
+
+Location Property RiveroodLocation  Auto  
+
+Location Property RiverwoodLocation  Auto  

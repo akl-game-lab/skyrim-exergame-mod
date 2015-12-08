@@ -5,6 +5,7 @@ import Game
 import StringUtil
 
 MiscObject Property OrbOfExperience  Auto  
+Location Property HelgenKeep  Auto
 
 int strengthPoints = 0
 int fitnessPoints = 0
@@ -15,7 +16,10 @@ int firstWeekPoints = 0
 string lastUpdateDate = ""
 string firstWeekCompleted = ""
 
+bool LeftHelgen = false
+
 ;Event called whenever a game is loaded. In Skyrim, when a player dies it counts as a game reload as well.
+;might need to add a bit that checks fotr the quest stage.
 Event OnPlayerLoadGame()
 	Actor player = Game.GetPlayer()
 	int currentPlayerLevel = Game.GetPlayer().GetLevel()
@@ -100,6 +104,17 @@ Event OnPlayerLoadGame()
 	If (Game.GetGameSettingFloat("fXPPerSkillRank") != 0)
 		Game.SetGameSettingFloat("fXPPerSkillRank", 0)
 	EndIf
+EndEvent
+
+Event OnLocationChange(Location akOldLoc, Location akNewLoc)	
+	If (GetOwningQuest().GetStage() == 0)
+		if ((akNewLoc != HelgenKeep ) && ( akOldLoc == HelgenKeep ) && (!LeftHelgen))
+			GetOwningQuest().setstage(5)
+			GetOwningQuest().setActive()
+			LeftHelgen = true
+			Debug.MessageBox("stage set to 5 and active")
+		endif
+	endif
 
 EndEvent
 
@@ -578,4 +593,4 @@ Function UpdateExperienceProgressBar()
 		Game.SetPlayerExperience(strengthPoints + fitnessPoints + sportsPoints)
 	EndIf
 
-EndFunction
+EndFunction  
