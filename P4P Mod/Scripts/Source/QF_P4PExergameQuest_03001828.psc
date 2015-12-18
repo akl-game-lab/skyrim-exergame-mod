@@ -1,5 +1,5 @@
 ;BEGIN FRAGMENT CODE - Do not edit anything between this and the end comment
-;NEXT FRAGMENT INDEX 43
+;NEXT FRAGMENT INDEX 46
 Scriptname QF_P4PExergameQuest_03001828 Extends Quest Hidden
 
 ;BEGIN ALIAS PROPERTY NPCQuestMaster
@@ -12,11 +12,16 @@ ReferenceAlias Property Alias_NPCQuestMaster Auto
 ReferenceAlias Property Alias_PlayerAlias Auto
 ;END ALIAS PROPERTY
 
-;BEGIN FRAGMENT Fragment_41
-Function Fragment_41()
+;BEGIN FRAGMENT Fragment_39
+Function Fragment_39()
 ;BEGIN CODE
-SetObjectiveDisplayed(5)
-Debug.MessageBox("objective is set to 5")
+;Reset variables to default Skyrim values
+Game.SetGameSettingFloat("fXPLevelUpBase", 75)
+Game.SetGameSettingFloat("fXPLevelUpMult", 25)
+Game.SetPlayerExperience(0)
+Game.SetGameSettingFloat("fXPPerSkillRank", 1)
+
+Debug.MessageBox("Road to fitness quest has been abandoned. Skyrim has reset to it's vanilla levelling system")
 ;END CODE
 EndFunction
 ;END FRAGMENT
@@ -30,6 +35,7 @@ Function Fragment_4()
 Game.SetGameSettingFloat("fXPLevelUpBase", (411/(540/16)))
 Game.SetGameSettingFloat("fXPLevelUpMult", (411/(540/10)))
 Game.SetPlayerExperience(0)
+Game.SetGameSettingFloat("fXPPerSkillRank", 0.00000)
 
 ;Then award a free level up to the player for accepting the quest and trigger the next quest stage
 Actor player = Game.GetPlayer()
@@ -47,25 +53,18 @@ SetStage(20)
 EndFunction
 ;END FRAGMENT
 
-;BEGIN FRAGMENT Fragment_0
-Function Fragment_0()
+;BEGIN FRAGMENT Fragment_43
+Function Fragment_43()
 ;BEGIN CODE
-SetObjectiveDisplayed(10)
-Game.SetGameSettingFloat("fXPPerSkillRank", 0.00000)
+SetObjectiveDisplayed(20)
 ;END CODE
 EndFunction
 ;END FRAGMENT
 
-;BEGIN FRAGMENT Fragment_39
-Function Fragment_39()
+;BEGIN FRAGMENT Fragment_41
+Function Fragment_41()
 ;BEGIN CODE
-;Reset variables to default Skyrim values
-Game.SetGameSettingFloat("fXPLevelUpBase", 75)
-Game.SetGameSettingFloat("fXPLevelUpMult", 25)
-Game.SetPlayerExperience(0)
-Game.SetGameSettingFloat("fXPPerSkillRank", 1)
-
-Debug.MessageBox("Road to fitness quest has been abandoned. Skyrim has reset to it's vanilla levelling system")
+SetObjectiveDisplayed(5)
 ;END CODE
 EndFunction
 ;END FRAGMENT

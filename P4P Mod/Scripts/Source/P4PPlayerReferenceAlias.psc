@@ -26,8 +26,10 @@ Event OnPlayerLoadGame()
 	bool readyForLeveling = false
 
 	;Turn off in-game experience if it is on. This technically should never be entered but has been checked for as a safety precaution.
-	If (Game.GetGameSettingFloat("fXPPerSkillRank") != 0)
+	If (GetOwningQuest().getStage() != 0) && (GetOwningQuest().getStage() != 55)
 		Game.SetGameSettingFloat("fXPPerSkillRank", 0)
+	Else
+		Game.SetGameSettingFloat("fXPPerSkillRank", 1)
 	EndIf
 
 	;If the quest stage is in stage 20, it means that the player will receive a level up once they've synced their accounts with the game.
@@ -56,8 +58,9 @@ Event OnPlayerLoadGame()
 		Game.SetPerkPoints(currentPerkPoints + 1)
 
 		GetOwningQuest().SetStage(25)
-		Debug.MessageBox("Your first sync has been detected! Great work!")
-		Debug.MessageBox("Congratulations you've leveled up. Keep up the good work!")
+		GetOwningQuest().SetObjectiveCompleted(20)
+		Debug.MessageBox("Your first sync has been detected! Great job!")
+		Debug.MessageBox("Congratulations you've leveled up. Now keep up the good work by logging your workouts on Exercise.com!")
 
 	;Else if the quest is in the first week calibration phase for the players fitness levels
 	ElseIf (GetOwningQuest().GetStage() >= 25) && (GetOwningQuest().GetStage() <= 45)
@@ -112,7 +115,6 @@ Event OnLocationChange(Location akOldLoc, Location akNewLoc)
 			GetOwningQuest().setstage(5)
 			GetOwningQuest().setActive()
 			LeftHelgen = true
-			Debug.MessageBox("stage set to 5 and active")
 		endif
 	endif
 
