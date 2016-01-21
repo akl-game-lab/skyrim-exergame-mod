@@ -32,7 +32,7 @@ class DataSyncObject:
 #         Initialization of variables to be used.
         previous_file_data = []
         print(self.user_profile)
-        print("this is the strength iterator" + str(self.strength_activity_iter))
+        print("this is the strength iterator:" + str(self.strength_activity_iter))
         first_import_date = ""
         previous_import_date = ""
         first_weeks_points = 0

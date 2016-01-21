@@ -9,22 +9,22 @@ MiscObject Property OrbOfExperience  Auto
 {This function schedules an update in the next hour}
 Event OnInit()
 	;Use when testing as waiting an hour is too long
-	;RegisterForSingleUpdate(10)
+	Debug.Notification("NEXT UPDATE REGISTERED IN 30SECS")
+	RegisterForSingleUpdate(30)
 	;When shipping the game, switch to 3600 seconds for each update
-	RegisterForSingleUpdate(3600)
+	;RegisterForSingleUpdate(3600)
 EndEvent
-
 
 Event OnUpdate()
 
+	Debug.Notification("UPDATE TRIGGERED")
 	;testing to see the orb of exp
-	Debug.MessageBox("testing to see if this is run")
 	Actor player = Game.GetPlayer()
 	
 	int stage = GetStage()
 
 	;If the player holds atleast 1 OrbOfExperience, level up the character
-	If (player.GetItemCount(OrbOfExperience) > 0)
+	If ((player.GetItemCount(OrbOfExperience) > 0) && (0))
 		;This message gets shown to the player to prevent them from being able to quit mid level up.
 		;Think of how other games have a message saying "Saving game... Please do not turn off the system".
 		;We do not want users to quit mid level up as it will likely break the file FISS reads/writes and also result in a lost level up.
@@ -59,11 +59,11 @@ Event OnUpdate()
 	EndIf
 
 	;Re-register for an update
-	RegisterForSingleUpdate(10)
+	RegisterForSingleUpdate(30)
 EndEvent
 
 string[] Function levelUp()
-	;Bug: If both fiss calls are done at the same time, it is very likely itll fuck up causing only one of the updates to occur. Threading issue. Not sure how we'll tackle it.
+	;Bug: If both fiss calls are done at the same time, it is very likely it'll fuck up causing only one of the updates to occur. Threading issue. Not sure how we'll tackle it.
 
 	FISSInterface fread = FISSFactory.getFISS()
 	If !fread 
@@ -78,18 +78,28 @@ string[] Function levelUp()
 	string levelDistThree = fread.LoadString("Level Distribution 3")
 	string levelDistFour = fread.LoadString("Level Distribution 4")
 
+	string end = fread .endLoad()
+	Debug.MessageBox("X" + levelDistToUse + "X")
+	
 	string[] remainingDists = new string[4]
 	remainingDists[0] = levelDistOne
 	remainingDists[1] = levelDistTwo
 	remainingDists[2] = levelDistThree
 	remainingDists[3] = levelDistFour
 
-	int healthAmount = SubString(levelDistToUse, 1, 2) as int 
-	int staminaAmount = SubString(levelDistToUse, 4, 5) as int
-	int magickaAmount = SubString(levelDistToUse, 7, 8) as int
-
-	string end = fread .endLoad()	
+	;just changed the implementation of the substring to grab the correct values
+	string healthString = SubString(levelDistToUse, 1, 2)
+	string staminaString = SubString(levelDistToUse, 4, 2)
+	string magickaString = SubString(levelDistToUse, 7, 2)
 	
+	Debug.MessageBox("ADDED HEALTH: " + healthString)
+	Debug.MessageBox("ADDED STAMINA: " + staminaString)
+	Debug.MessageBox("ADDED MAGICKA: " + magickaString)
+	
+	int healthAmount = healthString as int 
+	int staminaAmount = staminaString as int
+	int magickaAmount = magickaString as int
+
 	;Need to adjust positions of other levelDists in the file so we dont lose them/reuse the same one over and over
 	Actor player = Game.GetPlayer()
 	player.ModActorValue("health", healthAmount)
@@ -97,7 +107,7 @@ string[] Function levelUp()
 	player.ModActorValue("magicka", magickaAmount)
 
 	Game.SetPlayerLevel(Game.GetPlayer().GetLevel() + 1)
-	Game.SetPerkPoints(Game.GetPerkPoints() + 1)	
+	Game.SetPerkPoints(Game.GetPerkPoints() + 1)
 
 	Debug.MessageBox("An orb of experience has been used to level up. You have gained " + healthAmount + " into health, " + staminaAmount + " into stamina, " + magickaAmount + " into magicka!")
 	return remainingDists
@@ -114,7 +124,9 @@ Function tidyDistributionFile(string[] levelDists)
 	fwrite.beginSave("StackedLevelDistributions.txt", "P4P")
 
 	int pos = 0
-	While pos < 5
+	Actor player = Game.GetPlayer()
+	int numberOfOrbs = player.GetItemCount(OrbOfExperience)
+	While (pos < numberOfOrbs)
 		fwrite.saveString("Level Distribution " + pos, levelDists[pos])
 		pos = pos + 1 
 	EndWhile
@@ -122,7 +134,3 @@ Function tidyDistributionFile(string[] levelDists)
 	string end = fwrite.endSave()
 	;File looks very fucked after a tidy when opened in notepad, however it functions correctly when manipulated by Creation Kit.
 EndFunction
-
-Location Property RiveroodLocation  Auto  
-
-Location Property RiverwoodLocation  Auto  

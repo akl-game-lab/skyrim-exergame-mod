@@ -4,13 +4,14 @@ import FISSFactory
 import Game
 import StringUtil
 
-MiscObject Property OrbOfExperience  Auto  
+Potion Property LevelUpPotion Auto
 Location Property HelgenKeep  Auto
+int Property RealPlayerLevel Auto
+int Property LevelBracket Auto
 
 int strengthPoints = 0
 int fitnessPoints = 0
 int sportsPoints = 0
-
 string firstImportDate = ""
 int firstWeekPoints = 0
 string lastUpdateDate = ""
@@ -19,19 +20,21 @@ string firstWeekCompleted = ""
 bool LeftHelgen = false
 
 ;Event called whenever a game is loaded. In Skyrim, when a player dies it counts as a game reload as well.
-;might need to add a bit that checks fotr the quest stage.
+;might need to add a bit that checks for the quest stage.
 Event OnPlayerLoadGame()
 	Actor player = Game.GetPlayer()
 	int currentPlayerLevel = Game.GetPlayer().GetLevel()
 	bool readyForLeveling = false
 
 	;Turn off in-game experience if it is on. This technically should never be entered but has been checked for as a safety precaution.
-	If (GetOwningQuest().getStage() != 0) && (GetOwningQuest().getStage() != 55)
+	;Also turns on in-game experience if the quest is in a stage where the player should be getting exp
+	If (GetOwningQuest().getStage() > 5) && (GetOwningQuest().getStage() != 55)
 		Game.SetGameSettingFloat("fXPPerSkillRank", 0)
 	Else
 		Game.SetGameSettingFloat("fXPPerSkillRank", 1)
 	EndIf
 
+	;Accepted Quest
 	;If the quest stage is in stage 20, it means that the player will receive a level up once they've synced their accounts with the game.
 	;If the exercise_data file exists, it implies they've synced and we can therefore award the player a level up.
 	If (GetOwningQuest().GetStage() == 20)
@@ -50,17 +53,14 @@ Event OnPlayerLoadGame()
 			return 
 		EndIf
 		
-		int currentPerkPoints = Game.GetPerkPoints()
-		float currentStamina = player.GetActorValue("stamina")
-
-		player.SetActorValue("stamina", currentStamina + 10)
-		Game.SetPlayerLevel(currentPlayerLevel + 1)
-		Game.SetPerkPoints(currentPerkPoints + 1)
+		writeDistsToFile("h00 s10 m00")
+		player.AddItem(LevelUpPotion, 1)
+		incrementRealPlayerLevel()
 
 		GetOwningQuest().SetStage(25)
 		GetOwningQuest().SetObjectiveCompleted(20)
 		Debug.MessageBox("Your first sync has been detected! Great job!")
-		Debug.MessageBox("Congratulations you've leveled up. Now keep up the good work by logging your workouts on Exercise.com!")
+		Debug.MessageBox("Congratulations you have gained another Potion. Now keep up the good work by logging your workouts on Exercise.com!")
 
 	;Else if the quest is in the first week calibration phase for the players fitness levels
 	ElseIf (GetOwningQuest().GetStage() >= 25) && (GetOwningQuest().GetStage() <= 45)
@@ -75,6 +75,7 @@ Event OnPlayerLoadGame()
 		;If the first week has been completed, progress the quest to stage 50.
 		If (firstWeekCompleted == " True ")
 			GetOwningQuest().SetStage(50)
+			readyForLeveling = false
 		;Else readyForLevelling = true. This means that the player is in the first week, but needs to be levelled up and/or needs to have level modifiers adjusted
 		Else
 			readyForLeveling = true
@@ -87,14 +88,16 @@ Event OnPlayerLoadGame()
 	If ((GetOwningQuest().GetStage() > 45) || readyForLeveling)
 		LoadSessionData()
 
-		;Set the player's experience bar progress to 0 during the level modifer changing phase so that no inadvertent level ups occur
+		;Set the player's experience bar progress to 0 during the level modifier changing phase so that no inadvertent level ups occur
 		Game.SetPlayerExperience(0)
 
 		setLevelModifiers(readyForLeveling)
 
 		;Update the player's stats based off the amount of experience they have gained from their exercise
 		;Priority goes to levelling up health first, then stamina, then magicka. This was a design decision made by Rahul as health is a generic stat each class would require (i.e. mage or warrior)
-		UpdatePlayerStats()
+		;UpdatePlayerStats()
+		
+		stackRemainingXP()
 
 		;Remove points expended by these level ups from the exercise_data file
 		RemoveThisSessionData()
@@ -102,16 +105,13 @@ Event OnPlayerLoadGame()
 		;Add left over experience to the player's progress bar
 		UpdateExperienceProgressBar()
 	EndIf
-
-	;Ensure in-game experience cannot be earned/has been turned on
-	If (Game.GetGameSettingFloat("fXPPerSkillRank") != 0)
-		Game.SetGameSettingFloat("fXPPerSkillRank", 0)
-	EndIf
+	
+	;There used to be a fxpperrank variable set to 0 here but since it is already set at the beginning of this block, I just deleted it.
 EndEvent
 
 Event OnLocationChange(Location akOldLoc, Location akNewLoc)	
 	If (GetOwningQuest().GetStage() == 0)
-		if ((akNewLoc != HelgenKeep ) && ( akOldLoc == HelgenKeep ) && (!LeftHelgen))
+		if ((!LeftHelgen ) && ( akNewLoc != HelgenKeep ) && (akOldLoc == HelgenKeep))
 			GetOwningQuest().setstage(5)
 			GetOwningQuest().setActive()
 			LeftHelgen = true
@@ -130,13 +130,12 @@ Function setLevelModifiers(bool firstWeekAdjustmentDue)
 	float levelUpBase = 0
 	float levelUpMultiplier = 0
 	
-	float currentPlayerXP = Game.GetPlayerExperience()
 	int questStage = GetOwningQuest().GetStage()
 
 	;If the player has received their two free level ups from the quest, we need to start changing the experience requirements for level ups
 	If (questStage >= 25)
 
-		;Set the player's experience bar progress to 0 during the level modifer changing phase so that no inadvertent level ups occur
+		;Set the player's experience bar progress to 0 during the level modifier changing phase so that no inadvertent level ups occur
 		Game.SetPlayerExperience(0)
 
 		;The player's first week level adjustments are originally done when they accept the quest, in stage X.
@@ -187,6 +186,9 @@ Function setLevelModifiers(bool firstWeekAdjustmentDue)
 			fread.beginLoad("Exercise_data.txt")
 			firstWeekPoints = fread.loadInt("First week points")
 			string end = fread.endLoad()
+			if (firstWeekPoints == 0)
+				firstWeekPoints = 411
+			EndIf
 	
 			;We use 4 level brackets which scale the experience requirements for level ups to the player's progress in-game.
 			;These brackets range from levels:
@@ -224,17 +226,18 @@ EndFunction
 
 ;Similar to the above method but this checks whether a player has entered a new bracket
 ;after levelling up, such as going from level 9 to 10.
-Function UpdateLevelModifiers(int oldPlayerLevel, int newPlayerLevel)
+;only works for single level increments
+Function UpdateLevelModifiers(int newPlayerLevel)
 	float levelUpBase = 0
 	float levelUpMultiplier = 0
 	int bracketChangedTo = 1
 
 	;Check which level bracket the player has changed into
-	If (oldPlayerLevel <= 9) && (newPlayerLevel >= 10)
+	If (newPlayerLevel == 10)
 		bracketChangedTo = 2
-	ElseIf (oldPlayerLevel >= 10) && (newPlayerLevel >= 19) && (newPlayerLevel < 29)
+	ElseIf (newPlayerLevel == 20)
 		bracketChangedTo = 3
-	ElseIf (oldPlayerLevel >= 20) && (newPlayerLevel >= 29)
+	ElseIf (newPlayerLevel ==30)
 		bracketChangedTo = 4
 	EndIf
 
@@ -247,7 +250,10 @@ Function UpdateLevelModifiers(int oldPlayerLevel, int newPlayerLevel)
 		
 		fread.beginLoad("Exercise_data.txt")
 		firstWeekPoints = fread.loadInt("First week points")
-		string end = fread.endLoad()	
+		string end = fread.endLoad()
+		if (firstWeekPoints == 0)
+			firstWeekPoints = 411
+		EndIf
 
 		;Using which bracket the player has switched to, recalculate the player's experience requirement
 		If bracketChangedTo == 2
@@ -266,7 +272,6 @@ Function UpdateLevelModifiers(int oldPlayerLevel, int newPlayerLevel)
 
 		Game.SetGameSettingFloat("fXPLevelUpBase", levelUpBase)
 		Game.SetGameSettingFloat("fXPLevelUpMult", levelUpMultiplier)
-		Debug.MessageBox("Congratulations on reaching level " + newPlayerLevel + "! Remember to work hard for the gains.")
 	EndIf
 
 EndFunction
@@ -290,8 +295,11 @@ Function LoadSessionData()
 	strengthPoints = fread.loadInt("Outstanding_strength_points")
 	fitnessPoints = fread.loadInt("Outstanding_fitness_points")
 	sportsPoints = fread.loadInt("Outstanding_sport_points")
-
 	string endRead = fread.endLoad()
+	
+	if (firstWeekPoints == 0)
+		firstWeekPoints = 411
+	EndIf
 EndFunction
 
 
@@ -415,33 +423,26 @@ Function UpdatePlayerStats()
 
 	If levelComplete
 		int newPlayerLevel = player.GetLevel()
-		UpdateLevelModifiers(playerLevel, newPlayerLevel)
-	EndIf
-
-	;After a level up has been awarded, check whether the player has enough experience to level up again (and therefore be awarded Orbs of Experience)
-	stackRemainingXP()
-
-	If levelComplete != True
-		Debug.MessageBox("No level up this time. Go harder in the gym next time! You still need " + ((Game.GetExperienceForLevel(player.GetLevel()) - Game.GetPlayerExperience()) as int) + " XP to level up.")
+		;UpdateLevelModifiers(playerLevel, newPlayerLevel)
+		
+		;After a level up has been awarded, check whether the player has enough experience to level up again (and therefore be awarded Orbs of Experience)
+		stackRemainingXP()
+		;Debug.MessageBox("Congratulations you've leveled up with " + healthAmount + " points into health, " + staminaAmount + " points into stamina and " + magickaAmount + " points into magicka!")
 	Else
-		Debug.MessageBox("Congratulations you've leveled up with " + healthAmount + " points into health, " + staminaAmount + " points into stamina and " + magickaAmount + " points into magicka!")
+		Debug.MessageBox("No level up this time. Go harder in the gym next time! You still need " + ((Game.GetExperienceForLevel(player.GetLevel()) - Game.GetPlayerExperience()) as int) + " XP to level up.")
 	EndIf
 
 EndFunction
 
 
-;Award the player Orbs of Experience if they still have enough experience to level up again after their first level up
+;Award the player Potions of Experience if they still have enough experience to level up again after their first level up
 Function stackRemainingXP()
-	;This array stores arrays which indicate the distribution of attribute points to award for each Orb of Experience
+	;This array stores arrays which indicate the distribution of attribute points to award for each Potion of Experience
 	;The strings will be in the format of
-	;		hX sY mZ 		where X, Y, Z are positive integers
-	string[] stackedLevelDistributions = new string[4]
-	int arrayPos = 0
-
-	Actor player = Game.GetPlayer()
-	int playerLevel = Game.GetPlayer().GetLevel()
-	float currentPlayerXP = Game.GetPlayerExperience()
-	float requiredXPToLevelUp = Game.GetExperienceForLevel(playerLevel) - currentPlayerXP
+	;		hX sY mZ 		where X, Y, Z are non-negative integers
+	string stackedLevelDistributions = ""
+	
+	float requiredXPToLevelUp = Game.GetExperienceForLevel(realPlayerLevel)
 	
 	;Duplicated the fields as we do not want threading to break the logic
 	int strengthPointsCopy = strengthPoints
@@ -460,16 +461,12 @@ Function stackRemainingXP()
 	bool levelComplete = False
 
 	;As long as the total amount of experience that hasn't been "used" is greater than 0, go through and check if the player can get any Orbs of Experience.
-	;There is also a check for how many times it has been looped through with count, and caps at 10 times through to prevent infinite loops.
-	While (remainingXP > 0) && (count < 10)
-		If (!levelComplete) && (strengthPointsCopy >= requiredXPToLevelUp)
-			healthAmount = 10	
+	;There is also a check for how many times it has been looped through with count, and caps at 3 times to prevent the player from leveling too much.
+	While (remainingXP >= requiredXPToLevelUp) && (count < 4)
+		If (strengthPointsCopy >= requiredXPToLevelUp)	
 	
-			string levelDist = "h"+ healthAmount + " s" + staminaAmount + " m" + magickaAmount
-			stackedLevelDistributions[arrayPos] = levelDist
-			arrayPos = arrayPos + 1
-
-			healthAmount = 0
+			string levelDist = "h10 s00 m00"
+			stackedLevelDistributions = stackedLevelDistributions + levelDist
 			stackLevels = stackLevels + 1
 
 			remainingXP = remainingXP - requiredXPToLevelUp as int
@@ -490,9 +487,8 @@ Function stackRemainingXP()
 			int remainingAmount = (10 - healthAmount) as int
 			staminaAmount = remainingAmount
 
-			string levelDist = "h"+ healthAmount + " s" + staminaAmount + " m" + magickaAmount
-			stackedLevelDistributions[arrayPos] = levelDist
-			arrayPos = arrayPos + 1
+			string levelDist = "h0"+ healthAmount + " s0" + staminaAmount + " m00"
+			stackedLevelDistributions = stackedLevelDistributions + levelDist
 
 			healthAmount = 0
 			staminaAmount = 0
@@ -518,9 +514,8 @@ Function stackRemainingXP()
 			int remainingAmount = 10 - healthAmount - staminaAmount
 			magickaAmount =  remainingAmount
 
-			string levelDist = "h"+ healthAmount + " s" + staminaAmount + " m" + magickaAmount
-			stackedLevelDistributions[arrayPos] = levelDist
-			arrayPos = arrayPos + 1
+			string levelDist = "h0"+ healthAmount + " s0" + staminaAmount + " m0" + magickaAmount
+			stackedLevelDistributions = stackedLevelDistributions + levelDist
 
 			healthAmount = 0
 			staminaAmount = 0
@@ -535,35 +530,75 @@ Function stackRemainingXP()
 			strengthPointsCopy = 0
 			fitnessPointsCopy = 0
 		ElseIf levelComplete != true
+			;this all shouldn't be needed because all the values get reset anyway
 			float magickaPercentage = sportsPointsCopy/requiredXPToLevelUp
 			magickaAmount = (10*magickaPercentage) as int
 			
 			requiredXPToLevelUp = requiredXPToLevelUp - sportsPointsCopy
 			remainingXP = remainingXP - sportsPointsCopy
-			
+			count = 4
 		EndIf
-	
-		requiredXPToLevelUp = Game.GetExperienceForLevel(playerLevel + count)
-		count = count + 1
-		levelComplete = False
+		
+		if (levelComplete)
+		
+			incrementRealPlayerLevel()
+			requiredXPToLevelUp = Game.GetExperienceForLevel(realPlayerLevel)
+			count = count + 1
+			levelComplete = False
+			healthAmount = 0
+			staminaAmount = 0
+			magickaAmount = 0
 
+	 	EndIf
+	
+		
 	EndWhile
 
-	;Add Orb(s) of Experience to the player's inventory. The number of orbs given is the number of stackLevels.
-	player.AddItem(OrbOfExperience, stackLevels, false)
+
+	if (stackLevels == 0)
+		Debug.MessageBox("No Potions of Experience this time. Go harder in the gym next time! You still need " + requiredXPToLevelUp as int + " XP to level up.")
+	else
+		Debug.MessageBox("Congratulations you have gained " + stackLevels + " Potion(s) of Experience. Use them to level up.")
+
+		;Add Potion(s) of Experience to the player's inventory. The number of orbs given is the number of stackLevels.
+		game.getplayer().AddItem(LevelUpPotion, stackLevels)
+		
 	
-	;Write the attribute distributions to a file so that they can be read in after X amount of time (see quest script) when an Orb of Experience is consumed.
-	writeDistsToFile(stackedLevelDistributions)
+		;Write the attribute distributions to a file so that they can be read in after X amount of time (see quest script) when an Orb of Experience is consumed.
+		writeDistsToFile(stackedLevelDistributions)
 	
-	;Map points variables we manipulated to the points fields
-	strengthPoints = strengthPointsCopy
-	fitnessPoints = fitnessPointsCopy
-	sportsPoints = sportsPointsCopy
+		;if 3 potions were created, then clear all of the workout points that the player currently has to promote the player to still play the game frequently
+		if (stackLevels == 3) 
+			strengthPoints = 0
+			fitnessPoints = 0
+			sportsPoints = 0
+		else
+			;Otherwise just map the points variables we manipulated to the points fields
+			strengthPoints = strengthPointsCopy
+			fitnessPoints = fitnessPointsCopy
+			sportsPoints = sportsPointsCopy
+		endIf
+	EndIf
 EndFunction
 
 
 ;Write attribute distributions to a file so that they may be read in when an Orb of Experience is used
-Function writeDistsToFile(string[] levelDists)
+Function writeDistsToFile(string levelDists)
+
+	FISSInterface fread = FISSFactory.getFISS()
+	If !fread 
+		Debug.MessageBox("Fiss is not installed. Mod will not work correctly")
+		return None
+	EndIf
+
+	String previousDistributions
+
+	fread.beginLoad("StackedLevelDistributions.txt")
+	previousDistributions = fread.loadString("Level Distributions")
+	if ( IsPunctuation(previousDistributions))
+		previousDistributions = ""
+	EndIf
+
 	FISSInterface fiss = FISSFactory.getFISS()
 	If !fiss
 		Debug.MessageBox("Fiss is not installed. Mod will not work correctly")
@@ -571,13 +606,8 @@ Function writeDistsToFile(string[] levelDists)
 	EndIf
 
 	fiss.beginSave("StackedLevelDistributions.txt", "P4P")
-
-	int arrayPos = 0
-	While arrayPos < 5
-		; Can clean up by only writing dists that have values in the array
-		fiss.saveString("Level Distribution " + arrayPos, levelDists[arrayPos])
-		arrayPos = arrayPos + 1
-	EndWhile
+	levelDists =  previousDistributions + levelDists
+	fiss.saveString("Level Distributions", levelDists)
 
 	string end = fiss.endSave()
 EndFunction
@@ -588,7 +618,7 @@ EndFunction
 ;be the amount they have progressed towards the next level
 Function UpdateExperienceProgressBar()
 	Actor player = Game.GetPlayer()
-	If (player.GetItemCount(OrbOfExperience) > 0)
+	If (player.GetItemCount(LevelUpPotion) > 0)
 		float requiredXPToLevelUp =  Game.GetExperienceForLevel(player.GetLevel())
 		Game.SetPlayerExperience(requiredXPToLevelUp - 1)
 	Else
@@ -596,3 +626,19 @@ Function UpdateExperienceProgressBar()
 	EndIf
 
 EndFunction  
+
+
+;This function is used to increment the realPlayerLevel variable which can also be accessed from outside this script through this function.
+;This function is called anytime the player gains a level, so it will also check to see which level bracket the player should be in.
+Function incrementRealPlayerLevel()
+	realPlayerLevel = realPlayerLevel + 1
+	UpdateLevelModifiers(realPlayerLevel)
+EndFunction
+
+
+;This function is used to initialise the realPlayerLevel variable
+Function recordPlayerLevel()
+	realPlayerLevel = game.getPlayer().getLevel() + 1
+	;this line is important if the user started the quest while greater than level 10.
+	UpdateLevelModifiers(realPlayerLevel)
+EndFunction
