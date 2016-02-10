@@ -616,15 +616,14 @@ EndFunction
 ;Set the player's experience points to their progress bar
 ;If they have received any Orbs of Experience then the progress bar should show up as full, and if not it should 
 ;be the amount they have progressed towards the next level
+
 Function UpdateExperienceProgressBar()
 	Actor player = Game.GetPlayer()
-	If (player.GetItemCount(LevelUpPotion) > 0)
-		float requiredXPToLevelUp =  Game.GetExperienceForLevel(player.GetLevel())
-		Game.SetPlayerExperience(requiredXPToLevelUp - 1)
-	Else
-		Game.SetPlayerExperience(strengthPoints + fitnessPoints + sportsPoints)
-	EndIf
-
+	float ExperienceBarMaxValue = Game.GetExperienceForLevel(player.getLevel())
+	float requiredXPToLevelUp =  Game.GetExperienceForLevel(realPlayerLevel)
+	float currentExp = strengthPoints + fitnessPoints + sportsPoints
+	float scaledExp = (currentExp * requiredXPToLevelUp) / ExperienceBarMaxValue
+	Game.SetPlayerExperience(scaledExp)
 EndFunction  
 
 
