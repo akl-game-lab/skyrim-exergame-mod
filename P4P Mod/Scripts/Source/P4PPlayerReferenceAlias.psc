@@ -616,24 +616,15 @@ EndFunction
 ;Set the player's experience points to their progress bar
 ;If they have received any Orbs of Experience then the progress bar should show up as full, and if not it should 
 ;be the amount they have progressed towards the next level
+
 Function UpdateExperienceProgressBar()
 	Actor player = Game.GetPlayer()
-	If (player.GetItemCount(LevelUpPotion) > 0)
-		float requiredXPToLevelUp =  Game.GetExperienceForLevel(player.GetLevel())
-		Game.SetPlayerExperience(requiredXPToLevelUp - 1)
-	Else
-		Game.SetPlayerExperience(strengthPoints + fitnessPoints + sportsPoints)
-	EndIf
-
-EndFunction  
-
-
-;This function is used to increment the realPlayerLevel variable which can also be accessed from outside this script through this function.
-;This function is called anytime the player gains a level, so it will also check to see which level bracket the player should be in.
-Function incrementRealPlayerLevel()
-	realPlayerLevel = realPlayerLevel + 1
-	UpdateLevelModifiers(realPlayerLevel)
-EndFunction
+	float ExperienceBarMaxValue = Game.GetExperienceForLevel(player.getLevel())
+	float requiredXPToLevelUp =  Game.GetExperienceForLevel(realPlayerLevel)
+	float currentExp = strengthPoints + fitnessPoints + sportsPoints
+	float scaledExp = (currentExp * requiredXPToLevelUp) / ExperienceBarMaxValue
+	Game.SetPlayerExperience(scaledExp)
+EndFunction 
 
 
 ;This function is used to initialise the realPlayerLevel variable

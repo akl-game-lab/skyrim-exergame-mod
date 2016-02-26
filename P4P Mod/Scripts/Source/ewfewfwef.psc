@@ -3,14 +3,12 @@ Scriptname ewfewfwef extends ReferenceAlias
 import FISSFactory
 import Game
 import StringUtil
+import MyPluginScript
 
-Potion Property LevelUpPotion Auto
-MagicEffect Property LevelUp Auto
-ReferenceAlias Property alias_PotionAlias  Auto  
+potion property healthpotion auto	
 
 Event OnActivate(ObjectReference ref)
-
-	
+	game.getplayer().additem(healthpotion)
 
 EndEvent
 

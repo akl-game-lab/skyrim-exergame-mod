@@ -2,9 +2,8 @@ Scriptname P4PLevelUpScript extends activemagiceffect
 
 import StringUtil
 
-int property healthIncrease Auto
-int property staminaIncrease Auto
-int property magickaIncrease Auto
+P4PExergamingMCMPlayerAlias property playerReference auto 
+
 
 Event OnEffectStart(Actor akTarget, Actor akCaster)
 	;the player has activated the potion and is now begining the level up
@@ -28,8 +27,8 @@ string Function levelUp()
 	EndIf
 
 	;grab all the level distributions
-	fread.beginLoad("StackedLevelDistributions.txt")
-	string LevelDistributions = fread.LoadString("Level Distributions")
+	fread.beginLoad(playerReference.syncedUserName + playerReference.syncedSaveID + "_StackedLevelDistributions.txt")
+	string LevelDistributions = fread.LoadString("Level_Distributions")
 	if (IsPunctuation(LevelDistributions))
 		Debug.messageBox("it is punctuation")
 		LevelDistributions = ""
@@ -60,7 +59,7 @@ string Function levelUp()
 	Game.SetPlayerLevel(Game.GetPlayer().GetLevel() + 1)
 	Game.SetPerkPoints(Game.GetPerkPoints() + 1)
 
-	Debug.MessageBox("You have drank a Potion of Experience to reach level" + Game.GetPlayer().GetLevel() + 1 + ". You have gained " + healthAmount + " into health, " + staminaAmount + " into stamina, " + magickaAmount + " into magicka!")
+	Debug.MessageBox("You have drank a Potion of Experience to reach level" + (Game.GetPlayer().GetLevel() + (1 as int)) + ". You have gained " + magickaAmount + " into magicka, " + healthAmount + " into health and " + staminaAmount + " into stamina!")
 	return RemainingDists
 EndFunction
 
@@ -72,10 +71,10 @@ Function SaveRemainingDists(string remaingingDists)
 		return
 	EndIf
 
-	fwrite.beginSave("StackedLevelDistributions.txt", "P4P")
+	fwrite.beginSave(playerReference.syncedUserName + playerReference.syncedSaveID + "_StackedLevelDistributions.txt", "P4P")
 
 	Actor player = Game.GetPlayer()
-	fwrite.saveString("Level Distributions", remaingingDists)
+	fwrite.saveString("Level_Distributions", remaingingDists)
 
 	string end = fwrite.endSave()
 	;File looks very fucked after a tidy when opened in notepad, however it functions correctly when manipulated by Creation Kit.
